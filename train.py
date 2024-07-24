@@ -3,6 +3,8 @@ import time, os, torch, argparse, warnings, glob
 from dataLoader import train_loader, val_loader
 from utils.tools import *
 from ASD import ASD
+from PIL import Image
+import matplotlib.pyplot as plt
 
 def main():
     # This code is modified based on this [repository](https://github.com/TaoRuijie/TalkNet-ASD).
@@ -66,8 +68,10 @@ def main():
     mAPs = []
     scoreFile = open(args.scoreSavePath, "a+")
 
-    while(1):        
+    while(1):
+        losses = []     
         loss, lr = s.train_network(epoch = epoch, loader = trainLoader, **vars(args))
+        losses.append(loss)
         
         if epoch % args.testInterval == 0:        
             s.saveParameters(args.modelSavePath + "/model_%04d.model"%epoch)
@@ -77,8 +81,29 @@ def main():
             scoreFile.flush()
 
         if epoch >= args.maxEpoch:
-            quit()
+            # epochs = list(range(1, epoch + 1))
+            # plt.subplot(1, 2, 1)  # 2 rows, 1 column, 1st subplot
+            # plt.plot(epochs, mAPs, label='Accuracy(mAP)')
+            # plt.xlabel('Epochs')
+            # plt.ylabel('Accuracy')
+            # plt.legend()
+            # plt.title(f'Accuracy over {args.maxEpoch} Epochs')
+            # # Second subplot for Loss
+            # plt.subplot(1, 2, 2)  # 2 rows, 1 column, 2nd subplot
+            # plt.plot(epochs, losses, label='Loss')
+            # plt.xlabel('Epochs')
+            # plt.ylabel('Loss')
+            # plt.legend()
+            # plt.title(f'Loss over {args.maxEpoch} Epochs')
+            # plt.tight_layout()
+            # directory = args.savePath
+            # filename = 'Accuracy_and_Loss.png'
+            # full_path = os.path.join(directory, filename)
+            # plt.savefig(full_path)
 
+            # plt.show()
+                
+            quit()
         epoch += 1
 
 if __name__ == '__main__':

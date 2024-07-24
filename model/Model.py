@@ -10,7 +10,7 @@ class ASD_Model(nn.Module):
         
         self.visualEncoder  = visual_encoder()
         self.audioEncoder  = audio_encoder()
-        self.GRU = BGRU(128)
+        #self.GRU = BGRU(128)
 
     def forward_visual_frontend(self, x):
         B, T, W, H = x.shape  
@@ -26,7 +26,7 @@ class ASD_Model(nn.Module):
 
     def forward_audio_visual_backend(self, x1, x2):  
         x = x1 + x2 
-        x = self.GRU(x)   
+        #x = self.GRU(x)   
         x = torch.reshape(x, (-1, 128))
         return x    
 
