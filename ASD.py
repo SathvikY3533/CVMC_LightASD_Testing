@@ -78,6 +78,8 @@ class ASD(nn.Module):
         evalRes.drop(['instance_id'], axis=1,inplace=True)
         evalRes.to_csv(evalCsvSave, index=False)
         cmd = "python -O utils/get_ava_active_speaker_performance.py -g %s -p %s "%(evalOrig, evalCsvSave)
+        print(str(subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE).stdout).split(' '))
+        print(len(str(subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE).stdout).split(' ')))
         mAP = float(str(subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE).stdout).split(' ')[2][:5])
         return mAP
 
