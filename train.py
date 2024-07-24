@@ -39,14 +39,12 @@ def main():
     loader = train_loader(trialFileName = args.trainTrialAVA, \
                           audioPath      = os.path.join(args.audioPathAVA , 'train'), \
                           visualPath     = os.path.join(args.visualPathAVA, 'train'), \
-                          useAvdiar = args.useAvdiar, \
                           **vars(args))
     trainLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = True, num_workers = args.nDataLoaderThread, pin_memory = True)
 
     loader = val_loader(trialFileName = args.evalTrialAVA, \
                         audioPath     = os.path.join(args.audioPathAVA , args.evalDataType), \
                         visualPath    = os.path.join(args.visualPathAVA, args.evalDataType), \
-                        useAvdiar = args.useAvdiar, \
                         **vars(args))
     valLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = False, num_workers = 64, pin_memory = True)
 
