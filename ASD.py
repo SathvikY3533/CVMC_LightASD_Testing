@@ -59,29 +59,43 @@ class ASD(nn.Module):
         predScores = []
         for audioFeature, visualFeature, labels in tqdm.tqdm(loader):
             with torch.no_grad():                
-                audioEmbed  = self.model.forward_audio_frontend(audioFeature[0].cuda())
+                audioEmbed = self.model.forward_audio_frontend(audioFeature[0].cuda())
                 visualEmbed = self.model.forward_visual_frontend(visualFeature[0].cuda())
-                outsAV= self.model.forward_audio_visual_backend(audioEmbed, visualEmbed)  
-                labels = labels[0].reshape((-1)).cuda()             
-                _, predScore, _, _ = self.lossAV.forward(outsAV, labels)    
-                predScore = predScore[:,1].detach().cpu().numpy()
+                outsAV = self.model.forward_audio_visual_backend(audioEmbed, visualEmbed)
+                labels = labels[0].reshape((-1)).cuda()
+                _, predScore, _, _ = self.lossAV.forward(outsAV, labels)
+                predScore = predScore[:, 1].detach().cpu().numpy()
                 predScores.extend(predScore)
                 # break
+
         evalLines = open(evalOrig).read().splitlines()[1:]
-        labels = []
-        labels = pandas.Series( ['SPEAKING_AUDIBLE' for line in evalLines])
+        labels = pandas.Series(['SPEAKING_AUDIBLE' for line in evalLines])
         scores = pandas.Series(predScores)
         evalRes = pandas.read_csv(evalOrig)
         evalRes['score'] = scores
         evalRes['label'] = labels
-        evalRes.drop(['label_id'], axis=1,inplace=True)
-        evalRes.drop(['instance_id'], axis=1,inplace=True)
+        evalRes.drop(['label_id'], axis=1, inplace=True)
+        evalRes.drop(['instance_id'], axis=1, inplace=True)
         evalRes.to_csv(evalCsvSave, index=False)
-        cmd = "python -O utils/get_ava_active_speaker_performance.py -g %s -p %s "%(evalOrig, evalCsvSave)
-        print(str(subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE).stdout).split(' '))
-        print(len(str(subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE).stdout).split(' ')))
-        mAP = float(str(subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE).stdout).split(' ')[2][:5])
-        return mAP
+        
+        cmd = f"python -O utils/get_ava_active_speaker_performance.py -g {evalOrig} -p {evalCsvSave}"
+        result = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+        stdout_output = result.stdout.decode('utf-8')
+        stderr_output = result.stderr.decode('utf-8')
+        
+        print("stdout output:", stdout_output)
+        print("stderr output:", stderr_output)
+        
+        stdout_split = stdout_output.split(' ')
+        print("stdout split:", stdout_split)
+        print("Length of stdout split:", len(stdout_split))
+        
+        if len(stdout_split) > 2:
+            mAP = float(stdout_split[2][:5])
+            return mAP
+        else:
+            raise ValueError("Unexpected output format from the subprocess command")
+
 
     def saveParameters(self, path):
         torch.save(self.state_dict(), path)
