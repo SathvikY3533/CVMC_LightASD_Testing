@@ -27,6 +27,7 @@ def main():
     # For download dataset only, for evaluation only
     parser.add_argument('--downloadAVA',     dest='downloadAVA', action='store_true', help='Only download AVA dataset and do related preprocess')
     parser.add_argument('--evaluation',      dest='evaluation', action='store_true', help='Only do evaluation by using pretrained model [pretrain_AVA_CVPR.model]')
+    parser.add_argument('--useAvdiar',      action='store_true', help='using AVDIAR model or no?')
     args = parser.parse_args()
     # Data loader
     args = init_args(args)
@@ -38,12 +39,14 @@ def main():
     loader = train_loader(trialFileName = args.trainTrialAVA, \
                           audioPath      = os.path.join(args.audioPathAVA , 'train'), \
                           visualPath     = os.path.join(args.visualPathAVA, 'train'), \
+                          useAvdiar = args.useAvdiar, \
                           **vars(args))
     trainLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = True, num_workers = args.nDataLoaderThread, pin_memory = True)
 
     loader = val_loader(trialFileName = args.evalTrialAVA, \
                         audioPath     = os.path.join(args.audioPathAVA , args.evalDataType), \
                         visualPath    = os.path.join(args.visualPathAVA, args.evalDataType), \
+                        useAvdiar = args.useAvdiar, \
                         **vars(args))
     valLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = False, num_workers = 64, pin_memory = True)
 

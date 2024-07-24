@@ -2,11 +2,14 @@ import os, torch, numpy, cv2, random, glob, python_speech_features
 from scipy.io import wavfile
 from torchvision.transforms import RandomCrop
 
-def generate_audio_set(dataPath, batchList):
+def generate_audio_set(dataPath, batchList, useAvdiar):
     audioSet = {}
     for line in batchList:
         data = line.split('\t')
-        videoName = data[0][:13] #13 for AVDIAR, 11 for AVA
+        if(useAvdiar):
+            videoName = data[0][:13]
+        else:
+            videoName = data[0][:11]
         dataName = data[0]
         _, audio = wavfile.read(os.path.join(dataPath, videoName, dataName + '.wav'))
         audioSet[dataName] = audio
@@ -46,9 +49,12 @@ def load_audio(data, dataPath, numFrames, audioAug, audioSet = None):
     audio = audio[:int(round(numFrames * 4)),:]  
     return audio
 
-def load_visual(data, dataPath, numFrames, visualAug): 
+def load_visual(data, dataPath, numFrames, visualAug, useAvdiar): 
     dataName = data[0]
-    videoName = data[0][:13] #13 for AVDIAR, 11 for AVA
+    if(useAvdiar):
+        videoName = data[0][:13]
+    else:
+        videoName = data[0][:11]
     faceFolderPath = os.path.join(dataPath, videoName, dataName)
     faceFiles = glob.glob("%s/*.jpg"%faceFolderPath)
     sortedFaceFiles = sorted(faceFiles, key=lambda data: (float(data.split('/')[-1][:-4])), reverse=False) 
@@ -87,10 +93,11 @@ def load_label(data, numFrames):
     return res
 
 class train_loader(object):
-    def __init__(self, trialFileName, audioPath, visualPath, batchSize, **kwargs):
+    def __init__(self, trialFileName, audioPath, visualPath, batchSize, useAvdiar, **kwargs):
         self.audioPath  = audioPath
         self.visualPath = visualPath
         self.miniBatch = []      
+        self.useAvdiar = useAvdiar
         mixLst = open(trialFileName).read().splitlines()
         # sort the training set by the length of the videos, shuffle them to make more videos in the same batch belong to different movies
         sortedMixLst = sorted(mixLst, key=lambda data: (int(data.split('\t')[1]), int(data.split('\t')[-1])), reverse=True)               
@@ -107,11 +114,11 @@ class train_loader(object):
         batchList    = self.miniBatch[index]
         numFrames   = int(batchList[-1].split('\t')[1])
         audioFeatures, visualFeatures, labels = [], [], []
-        audioSet = generate_audio_set(self.audioPath, batchList) # load the audios in this batch to do augmentation
+        audioSet = generate_audio_set(self.audioPath, batchList, useAvdiar=self.useAvdiar) # load the audios in this batch to do augmentation
         for line in batchList:
             data = line.split('\t')            
             audioFeatures.append(load_audio(data, self.audioPath, numFrames, audioAug = True, audioSet = audioSet))  
-            visualFeatures.append(load_visual(data, self.visualPath,numFrames, visualAug = True))
+            visualFeatures.append(load_visual(data, self.visualPath,numFrames, visualAug = True, useAvdiar=self.useAvdiar))
             labels.append(load_label(data, numFrames))
         return torch.FloatTensor(numpy.array(audioFeatures)), \
                torch.FloatTensor(numpy.array(visualFeatures)), \
@@ -122,18 +129,19 @@ class train_loader(object):
 
 
 class val_loader(object):
-    def __init__(self, trialFileName, audioPath, visualPath, **kwargs):
+    def __init__(self, trialFileName, audioPath, visualPath, useAvdiar, **kwargs):
         self.audioPath  = audioPath
         self.visualPath = visualPath
         self.miniBatch = open(trialFileName).read().splitlines()
+        self.useAvdiar = useAvdiar
 
     def __getitem__(self, index):
         line       = [self.miniBatch[index]]
         numFrames  = int(line[0].split('\t')[1])
-        audioSet   = generate_audio_set(self.audioPath, line)        
+        audioSet   = generate_audio_set(self.audioPath, line, useAvdiar=self.useAvdiar)        
         data = line[0].split('\t')
         audioFeatures = [load_audio(data, self.audioPath, numFrames, audioAug = False, audioSet = audioSet)]
-        visualFeatures = [load_visual(data, self.visualPath,numFrames, visualAug = False)]
+        visualFeatures = [load_visual(data, self.visualPath,numFrames, visualAug = False, useAvdiar=self.useAvdiar)]
         labels = [load_label(data, numFrames)]         
         return torch.FloatTensor(numpy.array(audioFeatures)), \
                torch.FloatTensor(numpy.array(visualFeatures)), \
