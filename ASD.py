@@ -81,14 +81,7 @@ class ASD(nn.Module):
         cmd = f"python -O utils/get_ava_active_speaker_performance.py -g {evalOrig} -p {evalCsvSave}"
         result = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
         stdout_output = result.stdout.decode('utf-8')
-        stderr_output = result.stderr.decode('utf-8')
-        
-        print("stdout output:", stdout_output)
-        print("stderr output:", stderr_output)
-        
         stdout_split = stdout_output.split(' ')
-        print("stdout split:", stdout_split)
-        print("Length of stdout split:", len(stdout_split))
         
         if len(stdout_split) > 2:
             mAP = float(stdout_split[2][:5])
