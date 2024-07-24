@@ -6,7 +6,7 @@ def generate_audio_set(dataPath, batchList):
     audioSet = {}
     for line in batchList:
         data = line.split('\t')
-        videoName = data[0][:11]
+        videoName = data[0][:13] #13 for AVDIAR, 11 for AVA
         dataName = data[0]
         _, audio = wavfile.read(os.path.join(dataPath, videoName, dataName + '.wav'))
         audioSet[dataName] = audio
@@ -48,7 +48,7 @@ def load_audio(data, dataPath, numFrames, audioAug, audioSet = None):
 
 def load_visual(data, dataPath, numFrames, visualAug): 
     dataName = data[0]
-    videoName = data[0][:11]
+    videoName = data[0][:13] #13 for AVDIAR, 11 for AVA
     faceFolderPath = os.path.join(dataPath, videoName, dataName)
     faceFiles = glob.glob("%s/*.jpg"%faceFolderPath)
     sortedFaceFiles = sorted(faceFiles, key=lambda data: (float(data.split('/')[-1][:-4])), reverse=False) 
