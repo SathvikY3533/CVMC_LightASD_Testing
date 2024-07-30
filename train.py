@@ -21,7 +21,7 @@ def main():
     parser.add_argument('--nDataLoaderThread', type=int, default=64,  help='Number of loader threads')
     # Data path
     parser.add_argument('--dataPathAVA',  type=str, default="/Users/sathvikyechuri/Downloads/AVDIAR_ASD_FTLim", help='Save path of AVA dataset')
-    parser.add_argument('--savePath',     type=str, default="exps/exp1")
+    parser.add_argument('--savePath',     type=str, default="/content/drive/MyDrive/CVMC_UTD_Summer_Internship_2024/LightASD_Testing/")
     # Data selection
     parser.add_argument('--evalDataType', type=str, default="val", help='Only for AVA, to choose the dataset for evaluation, val or test')
     # For download dataset only, for evaluation only
@@ -68,13 +68,12 @@ def main():
         s = ASD(epoch = epoch, **vars(args))
 
     mAPs = []
+    losses = []
     scoreFile = open(args.scoreSavePath, "a+")
 
-    while(1):
-        losses = []     
+    while(1):        
         loss, lr = s.train_network(epoch = epoch, loader = trainLoader, **vars(args))
         losses.append(loss)
-        
         if epoch % args.testInterval == 0:        
             s.saveParameters(args.modelSavePath + "/model_%04d.model"%epoch)
             mAPs.append(s.evaluate_network(epoch = epoch, loader = valLoader, **vars(args)))
@@ -83,28 +82,33 @@ def main():
             scoreFile.flush()
 
         if epoch >= args.maxEpoch:
-            # epochs = list(range(1, epoch + 1))
-            # plt.subplot(1, 2, 1)  # 2 rows, 1 column, 1st subplot
-            # plt.plot(epochs, mAPs, label='Accuracy(mAP)')
-            # plt.xlabel('Epochs')
-            # plt.ylabel('Accuracy')
-            # plt.legend()
-            # plt.title(f'Accuracy over {args.maxEpoch} Epochs')
-            # # Second subplot for Loss
-            # plt.subplot(1, 2, 2)  # 2 rows, 1 column, 2nd subplot
-            # plt.plot(epochs, losses, label='Loss')
-            # plt.xlabel('Epochs')
-            # plt.ylabel('Loss')
-            # plt.legend()
-            # plt.title(f'Loss over {args.maxEpoch} Epochs')
-            # plt.tight_layout()
-            # directory = args.savePath
-            # filename = 'Accuracy_and_Loss.png'
-            # full_path = os.path.join(directory, filename)
-            # plt.savefig(full_path)
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            epochs = list(range(1, epoch + 1))
+            plt.subplot(1, 2, 1)  # 2 rows, 1 column, 1st subplot
+            plt.plot(epochs, mAPs, label='Accuracy(mAP)')
+            plt.xlabel('Epochs')
+            plt.ylabel('Accuracy')
+            plt.legend()
+            plt.title(f'Accuracy over {args.maxEpoch} Epochs')
+            # Second subplot for Loss
+            plt.subplot(1, 2, 2)  # 2 rows, 1 column, 2nd subplot
+            plt.plot(epochs, losses, label='Loss')
+            plt.xlabel('Epochs')
+            plt.ylabel('Loss')
+            plt.legend()
+            plt.title(f'Loss over {args.maxEpoch} Epochs')
 
-            # plt.show()
-                
+            # Adjust layout
+            plt.tight_layout()
+
+            # Save the combined plot
+            directory = args.savePath
+            filename = 'Accuracy_and_Loss.png'
+            full_path = os.path.join(directory, filename)
+            plt.savefig(full_path)
+
+            plt.show()
+            
             quit()
         epoch += 1
 
