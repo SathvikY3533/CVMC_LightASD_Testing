@@ -9,14 +9,28 @@ from loss import lossAV, lossV
 from model.Model import ASD_Model
 
 class ASD(nn.Module):
-    def __init__(self, lr = 0.001, lrDecay = 0.95, **kwargs):
-        super(ASD, self).__init__()        
-        self.model = ASD_Model().cuda()
-        self.lossAV = lossAV().cuda()
-        self.lossV = lossV().cuda()
-        self.optim = torch.optim.Adam(self.parameters(), lr = lr)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size = 1, gamma=lrDecay)
+    def __init__(self, lr=0.001, lrDecay=0.95, **kwargs):
+        super(ASD, self).__init__()
+        
+        self.device = self.get_device()
+        self.model = ASD_Model().to(self.device)
+        self.lossAV = lossAV().to(self.device)
+        self.lossV = lossV().to(self.device)
+        
+        self.optim = torch.optim.Adam(self.parameters(), lr=lr)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=1, gamma=lrDecay)
         print(time.strftime("%m-%d %H:%M:%S") + " Model para number = %.2f"%(sum(param.numel() for param in self.model.parameters()) / 1000 / 1000))
+
+    def get_device(self):
+        if torch.cuda.is_available():
+            print("Using CUDA")
+            return torch.device('cuda')
+        elif torch.backends.mps.is_available():
+            print("Using MPS")
+            return torch.device('mps')
+        else:
+            print("Using CPU")
+            return torch.device('cpu')
 
     def train_network(self, loader, epoch, **kwargs):
         self.train()
@@ -27,13 +41,13 @@ class ASD(nn.Module):
         for num, (audioFeature, visualFeature, labels) in enumerate(loader, start=1):
             self.zero_grad()
 
-            audioEmbed = self.model.forward_audio_frontend(audioFeature[0].cuda())
-            visualEmbed = self.model.forward_visual_frontend(visualFeature[0].cuda())
+            audioEmbed = self.model.forward_audio_frontend(audioFeature[0].to(self.device))
+            visualEmbed = self.model.forward_visual_frontend(visualFeature[0].to(self.device))
 
             outsAV= self.model.forward_audio_visual_backend(audioEmbed, visualEmbed)  
             outsV = self.model.forward_visual_backend(visualEmbed)
 
-            labels = labels[0].reshape((-1)).cuda() # Loss
+            labels = labels[0].reshape((-1)).to(self.device) # Loss
             nlossAV, _, _, prec = self.lossAV.forward(outsAV, labels, r)
             nlossV = self.lossV.forward(outsV, labels, r)
             nloss = nlossAV + 0.5 * nlossV
@@ -59,10 +73,10 @@ class ASD(nn.Module):
         predScores = []
         for audioFeature, visualFeature, labels in tqdm.tqdm(loader):
             with torch.no_grad():                
-                audioEmbed = self.model.forward_audio_frontend(audioFeature[0].cuda())
-                visualEmbed = self.model.forward_visual_frontend(visualFeature[0].cuda())
+                audioEmbed = self.model.forward_audio_frontend(audioFeature[0].to(self.device))
+                visualEmbed = self.model.forward_visual_frontend(visualFeature[0].to(self.device))
                 outsAV = self.model.forward_audio_visual_backend(audioEmbed, visualEmbed)
-                labels = labels[0].reshape((-1)).cuda()
+                labels = labels[0].reshape((-1)).to(self.device)
                 _, predScore, _, _ = self.lossAV.forward(outsAV, labels)
                 predScore = predScore[:, 1].detach().cpu().numpy()
                 predScores.extend(predScore)
@@ -89,15 +103,14 @@ class ASD(nn.Module):
         else:
             raise ValueError("Unexpected output format from the subprocess command")
 
-
     def saveParameters(self, path):
         torch.save(self.state_dict(), path)
 
     def loadParameters(self, path):
         selfState = self.state_dict()
-        loadedState = torch.load(path)
+        loadedState = torch.load(path, map_location=self.device)
         for name, param in loadedState.items():
-            origName = name;
+            origName = name
             if name not in selfState:
                 name = name.replace("module.", "")
                 if name not in selfState:

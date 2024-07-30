@@ -15,20 +15,33 @@ def generate_audio_set(dataPath, batchList, useAvdiar):
         audioSet[dataName] = audio
     return audioSet
 
-def overlap(dataName, audio, audioSet):   
-    noiseName =  random.sample(set(list(audioSet.keys())) - {dataName}, 1)[0]
-    noiseAudio = audioSet[noiseName]    
-    snr = [random.uniform(-5, 5)]
-    if len(noiseAudio) < len(audio):
-        shortage = len(audio) - len(noiseAudio)
-        noiseAudio = numpy.pad(noiseAudio, (0, shortage), 'wrap')
+def overlap(dataName, audio, audioSet):
+    # Ensure audioSet keys are sorted and converted to a list
+    audio_keys = sorted(list(audioSet.keys()))
+    
+    # Remove the dataName from the list
+    available_keys = list(set(audio_keys) - {dataName})
+    
+    # Ensure the population for sampling is still a sequence
+    if len(available_keys) > 0:
+        noiseName = random.sample(available_keys, 1)[0]
+        noiseAudio = audioSet[noiseName]
+        
+        snr = [random.uniform(-5, 5)]
+        if len(noiseAudio) < len(audio):
+            shortage = len(audio) - len(noiseAudio)
+            noiseAudio = numpy.pad(noiseAudio, (0, shortage), 'wrap')
+        else:
+            noiseAudio = noiseAudio[:len(audio)]
+        
+        noiseDB = 10 * numpy.log10(numpy.mean(abs(noiseAudio ** 2)) + 1e-4)
+        cleanDB = 10 * numpy.log10(numpy.mean(abs(audio ** 2)) + 1e-4)
+        noiseAudio = numpy.sqrt(10 ** ((cleanDB - noiseDB - snr) / 10)) * noiseAudio
+        audio = audio + noiseAudio
+        
+        return audio.astype(numpy.int16)
     else:
-        noiseAudio = noiseAudio[:len(audio)]
-    noiseDB = 10 * numpy.log10(numpy.mean(abs(noiseAudio ** 2)) + 1e-4)
-    cleanDB = 10 * numpy.log10(numpy.mean(abs(audio ** 2)) + 1e-4)
-    noiseAudio = numpy.sqrt(10 ** ((cleanDB - noiseDB - snr) / 10)) * noiseAudio
-    audio = audio + noiseAudio    
-    return audio.astype(numpy.int16)
+        raise ValueError("No valid noise samples available for overlap.")
 
 def load_audio(data, dataPath, numFrames, audioAug, audioSet = None):
     dataName = data[0]
